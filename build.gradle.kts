@@ -5,11 +5,22 @@ plugins {
     id("fabric-loom") version "0.10.+"
 }
 
-group = "com.example"
+group = "dev.isxander"
 version = "1.0"
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
 repositories {
+    mavenLocal()
     mavenCentral()
+}
+
+fun DependencyHandlerScope.includeModImplementation(dependency: Any) {
+    include(dependency)
+    modImplementation(dependency)
 }
 
 dependencies {
@@ -27,15 +38,15 @@ dependencies {
     modImplementation("net.fabricmc:fabric-loader:$loaderVersion")
     modImplementation("net.fabricmc.fabric-api:fabric-api:$fabricVersion")
     modImplementation("net.fabricmc:fabric-language-kotlin:$fabricKotlinVersion+kotlin.$kotlinVersion")
-}
 
-kotlin {
-    jvmToolchain {
-        (this as JavaToolchainSpec).languageVersion.set(JavaLanguageVersion.of(17))
-    }
+    includeModImplementation("io.ejekta:kambrik:3.0.2-1.18-SNAPSHOT.2022.0102.095710")
 }
 
 tasks {
+    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+        kotlinOptions.jvmTarget = "17"
+    }
+
     processResources {
         inputs.property("version", project.version)
         filesMatching("fabric.mod.json") {

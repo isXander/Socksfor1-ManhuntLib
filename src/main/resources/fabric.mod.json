@@ -1,36 +1,48 @@
 {
   "schemaVersion": 1,
-  "id": "modid",
+  "id": "manhunt",
   "version": "${version}",
-  "name": "The name of the mod",
-  "description": "Describe your mod here",
+  "name": "Minecraft Manhunt",
+  "description": "Trophies are placed around the map to unlock abilities.",
   "authors": [
-    "Your name"
+    "isXander"
   ],
-  "contact": {
-    "homepage": "https://example.com",
-    "issues": "https://github.com/example/example/issues",
-    "sources": "https://github.com/example/example"
-  },
-  "license": "The Unlicense",
-  "icon": "assets/modid/icon.png",
   "environment": "*",
   "entrypoints": {
     "main": [
       {
         "adapter": "kotlin",
-        "value": "com.author.modid.ModName"
+        "value": "dev.isxander.manhunt.main.Manhunt"
+      }
+    ],
+    "client": [
+      {
+        "adapter": "kotlin",
+        "value": "dev.isxander.manhunt.client.ManhuntClient"
+      }
+    ],
+    "kambrik": [
+      {
+        "adapter": "kotlin",
+        "value": "dev.isxander.manhunt.registry.ManhuntRegistry"
+      }
+    ],
+    "manhunt": [
+      {
+        "adapter": "kotlin",
+        "value": "dev.isxander.manhunt.test.TestGameType"
       }
     ]
   },
   "mixins": [
-    "modid.mixins.json"
+    "manhunt.mixins.json"
   ],
   "depends": {
     "fabric": "*",
     "fabricloader": ">=0.12.0",
-    "fabric-language-kotlin": ">=1.7.0+kotlin.1.6.0",
+    "fabric-language-kotlin": ">=1.7.1+kotlin.1.6.10",
     "minecraft": "1.18.x",
-    "java": ">=17"
+    "java": ">=17",
+    "kambrik": ">=3.0.0"
   }
 }
