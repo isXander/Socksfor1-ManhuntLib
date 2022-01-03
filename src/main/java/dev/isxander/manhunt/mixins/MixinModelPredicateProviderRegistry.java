@@ -13,8 +13,11 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 @Mixin(targets = "net/minecraft/client/item/ModelPredicateProviderRegistry$2")
 public abstract class MixinModelPredicateProviderRegistry {
+    /**
+     * Modifies the compass pointer location to the trophy.
+     */
     @ModifyVariable(method = "unclampedCall", at = @At(value = "STORE"), ordinal = 0)
-    public BlockPos modifyCompasPos(BlockPos pos, ItemStack itemStack, @Nullable ClientWorld clientWorld, @Nullable LivingEntity livingEntity, int i) {
+    public BlockPos modifyCompassPos(BlockPos pos, ItemStack itemStack, @Nullable ClientWorld clientWorld, @Nullable LivingEntity livingEntity, int i) {
         Entity entity = livingEntity != null ? livingEntity : itemStack.getHolder();
         if (entity == null) return null;
 

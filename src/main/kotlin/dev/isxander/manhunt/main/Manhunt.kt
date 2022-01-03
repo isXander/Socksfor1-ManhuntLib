@@ -9,7 +9,6 @@ import io.ejekta.kambrik.command.suggestionList
 import io.ejekta.kambrik.text.sendFeedback
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.minecraft.command.argument.EntityArgumentType
 import net.minecraft.sound.SoundEvents
 
@@ -29,31 +28,27 @@ object Manhunt : ModInitializer {
                     argString("gameType", suggestionList { GameTypeHandler.types.keys.toList() }) { gameType ->
                         argument(EntityArgumentType.player(), "speedrunner") { speedrunnerArg ->
                             argInt("trophyRadius") { trophyRadius ->
+                                requires { game?.started == false }
                                 runs {
-                                    try {
-                                        requires { game?.started == false }
+                                    val speedrunner = speedrunnerArg().getPlayer(source)
+                                    source.sendFeedback("Starting manhunt, speedrunner is ") { add(speedrunner.name) }
+                                    source.player?.playSound(SoundEvents.ITEM_LODESTONE_COMPASS_LOCK, 5f, 1f)
 
-                                        val speedrunner = speedrunnerArg().getPlayer(source)
-                                        source.sendFeedback("Starting manhunt, speedrunner is ") { add(speedrunner.name) }
-                                        source.player?.playSound(SoundEvents.ITEM_LODESTONE_COMPASS_LOCK, 5f, 1f)
-
-                                        game = ManhuntGame(GameTypeHandler.types[gameType()]!!, source.world, speedrunner, trophyRadius())
-                                        game!!.start()
-                                    } catch (e: Exception) {
-                                        source.sendFeedback("Failed to start manhunt")
-                                        e.printStackTrace()
-                                    }
+                                    game = ManhuntGame(GameTypeHandler.types[gameType()]!!, source.world, speedrunner, trophyRadius())
+                                    game!!.start()
                                 }
                             }
                         }
                     }
                 }
 
-                "stop" runs {
+                "stop" {
                     requires { game?.started == true }
-
-                    game!!.stop(ManhuntStopState.FORCE_STOP)
-                    source.sendFeedback("Stopped manhunt")
+                    runs {
+                        game!!.stop(ManhuntStopState.FORCE_STOP)
+                        game = null
+                        source.sendFeedback("Stopped manhunt")
+                    }
                 }
             }
         }
