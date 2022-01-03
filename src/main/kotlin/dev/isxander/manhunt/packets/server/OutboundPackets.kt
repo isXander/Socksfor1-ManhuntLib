@@ -1,8 +1,6 @@
 package dev.isxander.manhunt.packets.server
 
-import dev.isxander.manhunt.ManhuntStopState
 import dev.isxander.manhunt.packets.*
-import io.ejekta.kambrik.ext.packets.writeEnum
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.minecraft.server.network.ServerPlayerEntity

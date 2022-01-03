@@ -10,8 +10,9 @@ import dev.isxander.manhunt.registry.ManhuntRegistry
 import dev.isxander.manhunt.utils.sendPacketToAllPlayers
 import io.ejekta.kambrik.text.sendMessage
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityCombatEvents
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents
 import net.minecraft.block.Blocks
-import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
 import net.minecraft.server.network.ServerPlayerEntity
@@ -26,7 +27,7 @@ import kotlin.math.sqrt
 class ManhuntGame(val gameType: ManhuntGameType, val world: ServerWorld, val speedrunner: ServerPlayerEntity, val trophyRadius: Int) {
     val trophies = mutableListOf<Trophy>()
 
-    var currentTrophyIndex: Int = -1
+    var currentTrophyIndex: Int = 0
         private set
 
     val currentTrophyGoal: Trophy?
@@ -41,6 +42,19 @@ class ManhuntGame(val gameType: ManhuntGameType, val world: ServerWorld, val spe
                 stop(ManhuntStopState.HUNTERS_WIN)
             }
         }
+
+        ServerTickEvents.END_WORLD_TICK.register { world ->
+            for (trophy in trophies.subList(currentTrophyIndex, trophies.size)) {
+                val blockPos = trophy.blockPos
+
+                if (blockPos.y == world.bottomY && world.isChunkLoaded(blockPos)) {
+                    trophy.blockPos = world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, blockPos)
+                    if (trophy == currentTrophyGoal) {
+                        world.setBlockState(trophy.blockPos, ManhuntRegistry.TROPHY_BLOCK.defaultState)
+                    }
+                }
+            }
+        }
     }
 
     fun start() {
@@ -49,7 +63,9 @@ class ManhuntGame(val gameType: ManhuntGameType, val world: ServerWorld, val spe
         registerTrophies()
         readyPlayers()
 
-        nextTrophy()
+        val trophy = trophies[currentTrophyIndex]
+        world.setBlockState(trophy.blockPos, ManhuntRegistry.TROPHY_BLOCK.defaultState)
+        sendTrophyPos(speedrunner, trophy.blockPos)
 
         gameType.onGameStart(this)
         sendPacketToAllPlayers(world) { sendStartState(it) }
@@ -71,6 +87,7 @@ class ManhuntGame(val gameType: ManhuntGameType, val world: ServerWorld, val spe
             val trophyY = world.getTopY(Heightmap.Type.WORLD_SURFACE, trophyX.toInt(), trophyZ.toInt())
             val trophyPos = BlockPos(trophyX, trophyY.toDouble(), trophyZ)
 
+            println("Registering trophy at $trophyPos")
             trophies.add(Trophy(trophy, trophyPos))
         }
     }
@@ -103,6 +120,7 @@ class ManhuntGame(val gameType: ManhuntGameType, val world: ServerWorld, val spe
 
         world.setBlockState(pos, Blocks.AIR.defaultState)
         currentTrophyGoal!!.onAchieved.invoke(this)
+        gameType.onTrophyCollected(this)
         nextTrophy()
     }
 
@@ -114,10 +132,11 @@ class ManhuntGame(val gameType: ManhuntGameType, val world: ServerWorld, val spe
             return
         }
 
-        val trophy = trophies[currentTrophyIndex]
-        world.setBlockState(trophy.blockPos, ManhuntRegistry.TROPHY_BLOCK.defaultState)
+        val trophy = currentTrophyGoal!!
 
-        gameType.onTrophyCollected(this)
+        if (trophy.blockPos.y != world.bottomY)
+            world.setBlockState(trophy.blockPos, ManhuntRegistry.TROPHY_BLOCK.defaultState)
+
         sendTrophyPos(speedrunner, trophy.blockPos)
     }
 

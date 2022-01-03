@@ -10,5 +10,8 @@ object TestGameType : ManhuntGameType {
     override fun onGameStart(game: ManhuntGame) = println("Game Started!")
     override fun onTrophyCollected(game: ManhuntGame) = println("Trophy Collected!")
     override fun onStop(state: ManhuntStopState) = println("Stopped: $state")
-    override fun provideTrophies(): List<(ManhuntGame) -> Unit> = listOf { println("Test trophy 1") }
+    override fun provideTrophies(): List<(ManhuntGame) -> Unit> = listOf(
+        { println("Test trophy 1") },
+        { println("Test trophy 2") }
+    )
 }

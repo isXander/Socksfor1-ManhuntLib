@@ -21,6 +21,8 @@ fun receiveManhuntStop() {
 fun receiveTrophyPos() {
     ClientPlayNetworking.registerGlobalReceiver(NEW_TROPHY_POS) { client, handler, buf, responseSender ->
         val trophyPos = buf.readBlockPos()
+
+        println("New Trophy Location: $trophyPos")
         ManhuntGameClient.trophyPos = trophyPos
     }
 }
