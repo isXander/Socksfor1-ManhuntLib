@@ -8,23 +8,31 @@ import dev.isxander.manhunt.packets.server.sendStopState
 import dev.isxander.manhunt.packets.server.sendTrophyPos
 import dev.isxander.manhunt.registry.ManhuntRegistry
 import dev.isxander.manhunt.utils.sendPacketToAllPlayers
+import io.ejekta.kambrik.text.KambrikTextBuilder
 import io.ejekta.kambrik.text.sendMessage
+import io.ejekta.kambrik.text.textLiteral
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityCombatEvents
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents
 import net.minecraft.block.Blocks
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
+import net.minecraft.network.MessageType
+import net.minecraft.server.MinecraftServer
+import net.minecraft.server.PlayerManager
 import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.server.world.ServerWorld
+import net.minecraft.text.LiteralText
+import net.minecraft.text.Text
 import net.minecraft.util.Formatting
+import net.minecraft.util.Util
 import net.minecraft.util.math.BlockPos
 import net.minecraft.world.Heightmap
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-class ManhuntGame(val gameType: ManhuntGameType, val world: ServerWorld, val speedrunner: ServerPlayerEntity, val trophyRadius: Int) {
+class ManhuntGame(val gameType: ManhuntGameType, val server: MinecraftServer, val world: ServerWorld, val speedrunner: ServerPlayerEntity, val trophyRadius: Int) {
     val trophies = mutableListOf<Trophy>()
 
     var currentTrophyIndex: Int = 0
@@ -36,27 +44,6 @@ class ManhuntGame(val gameType: ManhuntGameType, val world: ServerWorld, val spe
     var started = false
         private set
 
-    init {
-        ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.register { world, attacker, victim ->
-            if (victim == speedrunner) {
-                stop(ManhuntStopState.HUNTERS_WIN)
-            }
-        }
-
-        ServerTickEvents.END_WORLD_TICK.register { world ->
-            for (trophy in trophies.subList(currentTrophyIndex, trophies.size)) {
-                val blockPos = trophy.blockPos
-
-                if (blockPos.y == world.bottomY && world.isChunkLoaded(blockPos)) {
-                    trophy.blockPos = world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, blockPos)
-                    if (trophy == currentTrophyGoal) {
-                        world.setBlockState(trophy.blockPos, ManhuntRegistry.TROPHY_BLOCK.defaultState)
-                    }
-                }
-            }
-        }
-    }
-
     fun start() {
         check(!started) { "Instance already started!" }
 
@@ -66,6 +53,8 @@ class ManhuntGame(val gameType: ManhuntGameType, val world: ServerWorld, val spe
         val trophy = trophies[currentTrophyIndex]
         world.setBlockState(trophy.blockPos, ManhuntRegistry.TROPHY_BLOCK.defaultState)
         sendTrophyPos(speedrunner, trophy.blockPos)
+
+        registerEvents()
 
         gameType.onGameStart(this)
         sendPacketToAllPlayers(world) { sendStartState(it) }
@@ -84,6 +73,7 @@ class ManhuntGame(val gameType: ManhuntGameType, val world: ServerWorld, val spe
 
             val trophyX = centerX + randomRadius * cos(theta)
             val trophyZ = centerZ + randomRadius * sin(theta)
+
             val trophyY = world.getTopY(Heightmap.Type.WORLD_SURFACE, trophyX.toInt(), trophyZ.toInt())
             val trophyPos = BlockPos(trophyX, trophyY.toDouble(), trophyZ)
 
@@ -95,16 +85,19 @@ class ManhuntGame(val gameType: ManhuntGameType, val world: ServerWorld, val spe
     private fun readyPlayers() {
         for (player in world.players) {
             if (player == speedrunner) {
-                player.sendMessage("You are the speedrunner! You have ${trophies.size} ${if (trophies.size > 1) "trophies" else "trophy"} to collect! Follow the compass to find them!") {
-                    format(Formatting.RED)
-                    bold = true
-                }
+                player.sendMessage(prefixed {
+                    add("You are the speedrunner! You have ${trophies.size} ${if (trophies.size > 1) "trophies" else "trophy"} to collect! Follow the compass to find them!" {
+                        format(Formatting.RED)
+                    })
+                }, MessageType.CHAT, Util.NIL_UUID)
                 speedrunner.giveItemStack(ItemStack(Items.COMPASS))
             } else {
-                player.sendMessage("You are a hunter! Hunt the speedrunner, ${speedrunner.displayName}!") {
-                    format(Formatting.GREEN)
-                    bold = true
-                }
+                player.sendMessage(prefixed {
+                    add("You are a hunter! Hunt the speedrunner, " {
+                        format(Formatting.GREEN)
+                    })
+                    add(speedrunner.displayName)
+                }, MessageType.CHAT, Util.NIL_UUID)
             }
         }
     }
@@ -116,11 +109,18 @@ class ManhuntGame(val gameType: ManhuntGameType, val world: ServerWorld, val spe
             return
         }
 
-        if (pos != currentTrophyGoal?.blockPos || playerEntity != speedrunner) return
+        if (pos != currentTrophyGoal?.blockPos || playerEntity != speedrunner) {
+            world.setBlockState(pos, ManhuntRegistry.TROPHY_BLOCK.defaultState)
+            return
+        }
 
         world.setBlockState(pos, Blocks.AIR.defaultState)
         currentTrophyGoal!!.onAchieved.invoke(this)
         gameType.onTrophyCollected(this)
+        server.playerManager.broadcast(prefixed {
+            add(speedrunner.displayName)
+            add(textLiteral(" has collected ${currentTrophyIndex + 1}/${trophies.size} ${if (trophies.size <= 1) "trophy" else "trophies"}!"))
+        }, MessageType.CHAT, Util.NIL_UUID)
         nextTrophy()
     }
 
@@ -141,6 +141,7 @@ class ManhuntGame(val gameType: ManhuntGameType, val world: ServerWorld, val spe
     }
 
     fun stop(state: ManhuntStopState) {
+        println(started)
         check(started) { "Instance not started!" }
 
         trophies.forEach { world.setBlockState(it.blockPos, Blocks.AIR.defaultState) }
@@ -150,5 +151,34 @@ class ManhuntGame(val gameType: ManhuntGameType, val world: ServerWorld, val spe
         gameType.onStop(state)
 
         started = false
+    }
+
+    private fun registerEvents() {
+        ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.register { world, attacker, victim ->
+            if (victim == speedrunner) {
+                stop(ManhuntStopState.HUNTERS_WIN)
+            }
+        }
+
+        ServerTickEvents.END_WORLD_TICK.register { world ->
+            for (trophy in trophies.subList(currentTrophyIndex, trophies.size)) {
+                val blockPos = trophy.blockPos
+
+                if (blockPos.y == world.bottomY && world.isChunkLoaded(blockPos)) {
+                    trophy.blockPos = world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, blockPos)
+                    if (trophy == currentTrophyGoal) {
+                        world.setBlockState(trophy.blockPos, ManhuntRegistry.TROPHY_BLOCK.defaultState)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun prefixed(func: KambrikTextBuilder<LiteralText>.() -> Unit = {}): Text {
+        val builder = KambrikTextBuilder(textLiteral("[Manhunt] ") {
+            format(Formatting.RED, Formatting.BOLD)
+        })
+        builder.func()
+        return builder.root
     }
 }
