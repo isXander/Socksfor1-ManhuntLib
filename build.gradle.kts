@@ -38,7 +38,7 @@ dependencies {
     modImplementation("net.fabricmc.fabric-api:fabric-api:$fabricVersion")
     modImplementation("net.fabricmc:fabric-language-kotlin:$fabricKotlinVersion+kotlin.$kotlinVersion")
 
-    includeModImplementation("io.ejekta:kambrik:3.1.0-1.18")
+    modImplementation("io.ejekta:kambrik:3.1.0-1.18")
 }
 
 tasks {

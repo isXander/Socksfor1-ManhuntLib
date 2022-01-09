@@ -5,4 +5,6 @@ import io.ejekta.kambrik.registration.KambrikAutoRegistrar
 
 object ManhuntRegistry : KambrikAutoRegistrar {
     val TROPHY_BLOCK = "trophy" forBlock TrophyBlock()
+
+    override fun afterRegistration() {}
 }
