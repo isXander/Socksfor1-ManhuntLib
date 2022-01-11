@@ -21,9 +21,16 @@ public abstract class MixinModelPredicateProviderRegistry {
         Entity entity = livingEntity != null ? livingEntity : itemStack.getHolder();
         if (entity == null) return null;
 
-        boolean inGame = ManhuntGameClient.INSTANCE.getStarted();
+        ManhuntGameClient manhunt = ManhuntGameClient.INSTANCE;
 
-        if (inGame) return ManhuntGameClient.INSTANCE.getTrophyPos();
+        boolean inGame = manhunt.getStarted();
+
+        if (inGame) {
+            if (manhunt.getTrophyPos() != null)
+                return manhunt.getTrophyPos();
+            else if (manhunt.getSpeedrunner() != null)
+                return manhunt.getSpeedrunner().getBlockPos();
+        }
         return pos;
     }
 }

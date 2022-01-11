@@ -57,7 +57,7 @@ class ManhuntGame(val gameType: ManhuntGameType, val server: MinecraftServer, va
         registerEvents()
 
         gameType.onGameStart(this)
-        sendPacketToAllPlayers(world) { sendStartState(it) }
+        sendPacketToAllPlayers(world) { sendStartState(it, speedrunner) }
 
         started = true
     }
@@ -141,8 +141,7 @@ class ManhuntGame(val gameType: ManhuntGameType, val server: MinecraftServer, va
     }
 
     fun stop(state: ManhuntStopState) {
-        println(started)
-        check(started) { "Instance not started!" }
+        if (!started) return
 
         trophies.forEach { world.setBlockState(it.blockPos, Blocks.AIR.defaultState) }
         speedrunner.inventory.remove({ it.item == Items.COMPASS }, 1, speedrunner.inventory)
