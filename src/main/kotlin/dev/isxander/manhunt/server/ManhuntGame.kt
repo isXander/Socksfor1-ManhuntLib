@@ -90,7 +90,6 @@ class ManhuntGame(val gameType: ManhuntGameType, val server: MinecraftServer, va
                         format(Formatting.RED)
                     })
                 }, MessageType.CHAT, Util.NIL_UUID)
-                speedrunner.giveItemStack(ItemStack(Items.COMPASS))
             } else {
                 player.sendMessage(prefixed {
                     add("You are a hunter! Hunt the speedrunner, " {
@@ -99,6 +98,7 @@ class ManhuntGame(val gameType: ManhuntGameType, val server: MinecraftServer, va
                     add(speedrunner.displayName)
                 }, MessageType.CHAT, Util.NIL_UUID)
             }
+            player.giveItemStack(ItemStack(Items.COMPASS))
         }
     }
 
