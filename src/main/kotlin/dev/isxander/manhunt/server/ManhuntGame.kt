@@ -9,17 +9,13 @@ import dev.isxander.manhunt.packets.server.sendTrophyPos
 import dev.isxander.manhunt.registry.ManhuntRegistry
 import dev.isxander.manhunt.utils.sendPacketToAllPlayers
 import io.ejekta.kambrik.text.KambrikTextBuilder
-import io.ejekta.kambrik.text.sendMessage
 import io.ejekta.kambrik.text.textLiteral
-import net.fabricmc.fabric.api.entity.event.v1.ServerEntityCombatEvents
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents
 import net.minecraft.block.Blocks
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
 import net.minecraft.network.MessageType
 import net.minecraft.server.MinecraftServer
-import net.minecraft.server.PlayerManager
 import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.server.world.ServerWorld
 import net.minecraft.text.LiteralText
@@ -144,7 +140,6 @@ class ManhuntGame(val gameType: ManhuntGameType, val server: MinecraftServer, va
         if (!started) return
 
         trophies.forEach { world.setBlockState(it.blockPos, Blocks.AIR.defaultState) }
-        speedrunner.inventory.remove({ it.item == Items.COMPASS }, 1, speedrunner.inventory)
 
         sendPacketToAllPlayers(world) { sendStopState(it) }
         gameType.onStop(state)
@@ -153,10 +148,9 @@ class ManhuntGame(val gameType: ManhuntGameType, val server: MinecraftServer, va
     }
 
     private fun registerEvents() {
-        ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.register { world, attacker, victim ->
-            if (victim == speedrunner) {
-                stop(ManhuntStopState.HUNTERS_WIN)
-            }
+        ServerTickEvents.END_SERVER_TICK.register {
+            if (started)
+                sendPacketToAllPlayers(world) { sendStartState(it, speedrunner) }
         }
 
         ServerTickEvents.END_WORLD_TICK.register { world ->
