@@ -10,7 +10,7 @@ import net.minecraft.util.math.BlockPos
 
 fun sendStartState(player: ServerPlayerEntity, speedrunner: PlayerEntity) {
     val pbb = PacketByteBufs.create()
-    pbb.writeUuid(speedrunner.uuid)
+    pbb.writeBlockPos(speedrunner.blockPos)
 
     ServerPlayNetworking.send(player, MANHUNT_START, pbb)
 }

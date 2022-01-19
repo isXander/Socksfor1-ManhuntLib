@@ -28,8 +28,8 @@ public abstract class MixinModelPredicateProviderRegistry {
         if (inGame) {
             if (manhunt.getTrophyPos() != null)
                 return manhunt.getTrophyPos();
-            else if (manhunt.getSpeedrunner() != null)
-                return manhunt.getSpeedrunner().getBlockPos();
+            else if (manhunt.getSpeedrunnerPos() != null)
+                return manhunt.getSpeedrunnerPos();
         }
         return pos;
     }

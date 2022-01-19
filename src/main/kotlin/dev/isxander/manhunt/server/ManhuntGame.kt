@@ -12,6 +12,7 @@ import io.ejekta.kambrik.text.KambrikTextBuilder
 import io.ejekta.kambrik.text.textLiteral
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents
 import net.minecraft.block.Blocks
+import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
 import net.minecraft.network.MessageType
@@ -24,11 +25,15 @@ import net.minecraft.util.Formatting
 import net.minecraft.util.Util
 import net.minecraft.util.math.BlockPos
 import net.minecraft.world.Heightmap
+import java.util.*
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-class ManhuntGame(val gameType: ManhuntGameType, val server: MinecraftServer, val world: ServerWorld, val speedrunner: ServerPlayerEntity, val trophyRadius: Int) {
+class ManhuntGame(val gameType: ManhuntGameType, val server: MinecraftServer, val world: ServerWorld, val speedrunnerUuid: UUID, val trophyRadius: Int) {
+    val speedrunner: ServerPlayerEntity
+        get() = server.playerManager.getPlayer(speedrunnerUuid)!!
+
     val trophies = mutableListOf<Trophy>()
 
     var currentTrophyIndex: Int = 0

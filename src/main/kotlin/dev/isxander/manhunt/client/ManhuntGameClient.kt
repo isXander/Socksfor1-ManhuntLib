@@ -5,6 +5,6 @@ import net.minecraft.util.math.BlockPos
 
 object ManhuntGameClient {
     var started: Boolean = false
-    var speedrunner: PlayerEntity? = null
+    var speedrunnerPos: BlockPos? = null
     var trophyPos: BlockPos? = null
 }

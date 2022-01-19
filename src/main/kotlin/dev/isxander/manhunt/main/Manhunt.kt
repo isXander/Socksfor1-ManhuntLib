@@ -39,7 +39,7 @@ object Manhunt : ModInitializer {
                                     source.sendFeedback("Starting manhunt, speedrunner is ") { add(speedrunner.name) }
                                     source.player?.playSound(SoundEvents.ITEM_LODESTONE_COMPASS_LOCK, 5f, 1f)
 
-                                    game = ManhuntGame(GameTypeHandler.types[gameType()]!!, source.server, source.world, speedrunner, trophyRadius())
+                                    game = ManhuntGame(GameTypeHandler.types[gameType()]!!, source.server, source.world, speedrunner.uuid, trophyRadius())
                                     game!!.start()
                                 }
                             }

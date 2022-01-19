@@ -11,14 +11,14 @@ import net.fabricmc.loader.api.FabricLoader
 fun receiveManhuntStart() {
     ClientPlayNetworking.registerGlobalReceiver(MANHUNT_START) { client, handler, buf, responseSender ->
         ManhuntGameClient.started = true
-        ManhuntGameClient.speedrunner = handler.world.getPlayerByUuid(buf.readUuid())
+        ManhuntGameClient.speedrunnerPos = buf.readBlockPos()
     }
 }
 
 fun receiveManhuntStop() {
     ClientPlayNetworking.registerGlobalReceiver(MANHUNT_STOP) { client, handler, buf, responseSender ->
         ManhuntGameClient.started = false
-        ManhuntGameClient.speedrunner = null
+        ManhuntGameClient.speedrunnerPos = null
     }
 }
 
