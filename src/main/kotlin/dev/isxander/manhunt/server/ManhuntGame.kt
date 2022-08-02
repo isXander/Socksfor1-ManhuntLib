@@ -12,7 +12,6 @@ import io.ejekta.kambrik.text.KambrikTextBuilder
 import io.ejekta.kambrik.text.textLiteral
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents
 import net.minecraft.block.Blocks
-import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
 import net.minecraft.network.MessageType
@@ -25,12 +24,19 @@ import net.minecraft.util.Formatting
 import net.minecraft.util.Util
 import net.minecraft.util.math.BlockPos
 import net.minecraft.world.Heightmap
+import net.minecraft.world.World
 import java.util.*
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-class ManhuntGame(val gameType: ManhuntGameType, val server: MinecraftServer, val world: ServerWorld, val speedrunnerUuid: UUID, val trophyRadius: Int) {
+class ManhuntGame(
+    val gameType: ManhuntGameType,
+    val server: MinecraftServer,
+    val world: ServerWorld,
+    val speedrunnerUuid: UUID,
+    val trophyRadius: Int
+) {
     val speedrunner: ServerPlayerEntity
         get() = server.playerManager.getPlayer(speedrunnerUuid)!!
 
@@ -67,7 +73,8 @@ class ManhuntGame(val gameType: ManhuntGameType, val server: MinecraftServer, va
         val centerX = speedrunner.blockX
         val centerZ = speedrunner.blockZ
 
-        for (trophy in gameType.provideTrophies()) {
+        val gameTrophies = gameType.provideTrophies()
+        while (trophies.size < gameTrophies.size) {
             val random = world.random
             val randomRadius = trophyRadius * sqrt(random.nextDouble())
             val theta = random.nextDouble() * 2 * Math.PI
@@ -75,11 +82,67 @@ class ManhuntGame(val gameType: ManhuntGameType, val server: MinecraftServer, va
             val trophyX = centerX + randomRadius * cos(theta)
             val trophyZ = centerZ + randomRadius * sin(theta)
 
-            val trophyY = world.getTopY(Heightmap.Type.WORLD_SURFACE, trophyX.toInt(), trophyZ.toInt())
+            val trophyY: Int = if (world.registryKey == World.NETHER) {
+                val minY = 32 // above lava sea
+                var maxY = minY
+                var finalHeight = 0
+                for (height in minY until 319) { // find bedrock level (done for if mods have modified generation)
+                    if (world.getBlockState(
+                            BlockPos(
+                                trophyX,
+                                height.toDouble(),
+                                trophyZ
+                            )
+                        ).block == Blocks.BEDROCK
+                    ) break
+                    finalHeight = height
+                    maxY = height
+                }
+                var mostAirBlocksAbove = 0
+                // Optimal position = position with most air blocks above -> lowers chance of it being in a random cave
+                for (height in minY until maxY) {
+                    if (world.getBlockState(
+                            BlockPos(
+                                trophyX,
+                                height.toDouble() - 1,
+                                trophyZ
+                            )
+                        ).isSolidBlock(
+                            world, BlockPos(
+                                trophyX,
+                                height.toDouble() - 1,
+                                trophyZ
+                            )
+                        )
+                    ) {
+                        var airBlocksAbove = 0
+                        for (h in height until maxY) {
+                            if (world.getBlockState(
+                                    BlockPos(
+                                        trophyX,
+                                        h.toDouble(),
+                                        trophyZ
+                                    )
+                                ).isAir
+                            ) airBlocksAbove++
+                            else break
+                        }
+                        if (airBlocksAbove > mostAirBlocksAbove) {
+                            finalHeight = height
+                            mostAirBlocksAbove = airBlocksAbove
+                        }
+                    }
+                }
+                // if no good spot is found, try again
+                if (finalHeight == 0 || mostAirBlocksAbove < 3) continue
+                finalHeight
+            } else {
+                world.getTopY(Heightmap.Type.WORLD_SURFACE, trophyX.toInt(), trophyZ.toInt())
+            }
             val trophyPos = BlockPos(trophyX, trophyY.toDouble(), trophyZ)
 
             println("Registering trophy at $trophyPos")
-            trophies.add(Trophy(trophy, trophyPos))
+            trophies.add(Trophy(gameTrophies[trophies.size], trophyPos))
         }
     }
 
