@@ -95,7 +95,6 @@ class ManhuntGame(
                             )
                         ).block == Blocks.BEDROCK
                     ) break
-                    finalHeight = height
                     maxY = height
                 }
                 var mostAirBlocksAbove = 0
